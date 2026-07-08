@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test and coverage artifacts
+coverage/
+.nyc_output/
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Local tooling and caches
+.cache/
+.vite/
+.turbo/
+.eslintcache
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+
+# Azure/local emulation data
+.azurite
