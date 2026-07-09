@@ -5,9 +5,6 @@ param storageAccountName string
 param containerImage string
 param containerTag string
 
-// AcrPull built-in role
-var acrPullRoleId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
-
 // Determine if image is from ACR (doesn't contain '.') or external (contains registry server)
 var isAcrImage = !contains(containerImage, '.')
 var imageRef = isAcrImage ? '${acr.properties.loginServer}/${containerImage}:${containerTag}' : '${containerImage}:${containerTag}'
@@ -86,17 +83,6 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
         ]
       }
     }
-  }
-}
-
-// Grant AcrPull to the Container App's system-assigned MI
-resource acrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acr.id, containerApp.id, acrPullRoleId)
-  scope: acr
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPullRoleId)
-    principalId: containerApp.identity.principalId
-    principalType: 'ServicePrincipal'
   }
 }
 

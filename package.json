@@ -11,7 +11,8 @@
     "start:azurite": "azurite-table --silent --location .azurite --debug .azurite/debug.log",
     "seed": "tsx scripts/seed-data.ts",
     "dev": "cross-env NODE_ENV=development concurrently \"node build-ui.mjs --watch\" \"tsx watch main.ts\"",
-    "deploy:azure": "pwsh -File scripts/deploy-azure.ps1"
+    "deploy:azure": "pwsh -File scripts/deploy-azure.ps1",
+    "deploy:quick": "pwsh -File scripts/quick-deploy.ps1"
   },
   "dependencies": {
     "@azure/data-tables": "^13.3.0",
