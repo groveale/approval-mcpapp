@@ -2,6 +2,7 @@ param location string
 param appName string
 param registryName string
 param storageAccountName string
+param environmentSubnetId string
 param containerImage string
 param containerTag string
 
@@ -18,6 +19,10 @@ resource env 'Microsoft.App/managedEnvironments@2024-03-01' = {
   location: location
   properties: {
     zoneRedundant: false
+    vnetConfiguration: {
+      infrastructureSubnetId: environmentSubnetId
+      internal: false
+    }
   }
 }
 

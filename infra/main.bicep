@@ -23,6 +23,16 @@ module storage 'modules/storage.bicep' = {
   }
 }
 
+// ── Private Networking for Storage + Container Apps ────────────────
+module networking 'modules/networking.bicep' = {
+  name: 'networking'
+  params: {
+    location: location
+    appName: appName
+    storageAccountId: storage.outputs.storageAccountId
+  }
+}
+
 // ── Container Registry ───────────────────────────────────────────────
 module registry 'modules/registry.bicep' = {
   name: 'registry'
@@ -40,6 +50,7 @@ module containerApp 'modules/container-app.bicep' = if (deployContainerApp) {
     appName: appName
     registryName: registry.outputs.registryName
     storageAccountName: storage.outputs.storageAccountName
+    environmentSubnetId: networking.outputs.infrastructureSubnetId
     containerImage: containerImage
     containerTag: containerTag
   }

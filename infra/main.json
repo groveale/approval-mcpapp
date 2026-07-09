@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "8014372168287687615"
+      "templateHash": "1473972455908101081"
     }
   },
   "parameters": {
@@ -116,6 +116,171 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
+      "name": "networking",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "appName": {
+            "value": "[parameters('appName')]"
+          },
+          "storageAccountId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.storageAccountId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.44.1.10279",
+              "templateHash": "14891369711312015597"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "appName": {
+              "type": "string"
+            },
+            "storageAccountId": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "baseName": "[take(toLower(replace(replace(parameters('appName'), '-', ''), '_', '')), 40)]",
+            "tablePrivateDnsZoneName": "[format('privatelink.table.{0}', environment().suffixes.storage)]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-09-01",
+              "name": "[format('{0}-vnet', variables('baseName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "10.10.0.0/16"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "aca-infra",
+                    "properties": {
+                      "addressPrefix": "10.10.0.0/23",
+                      "delegations": [
+                        {
+                          "name": "acaDelegation",
+                          "properties": {
+                            "serviceName": "Microsoft.App/environments"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "private-endpoints",
+                    "properties": {
+                      "addressPrefix": "10.10.2.0/24",
+                      "privateEndpointNetworkPolicies": "Disabled"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[variables('tablePrivateDnsZoneName')]",
+              "location": "global"
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', variables('tablePrivateDnsZoneName'), format('link-{0}', variables('baseName')))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', variables('baseName')))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('tablePrivateDnsZoneName'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', variables('baseName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2023-09-01",
+              "name": "[format('{0}-stg-pe', variables('baseName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[format('{0}/subnets/private-endpoints', resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', variables('baseName'))))]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "storage-table",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('storageAccountId')]",
+                      "groupIds": [
+                        "table"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', variables('baseName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2023-09-01",
+              "name": "[format('{0}/{1}', format('{0}-stg-pe', variables('baseName')), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "table-zone",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('tablePrivateDnsZoneName'))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('{0}-stg-pe', variables('baseName')))]",
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('tablePrivateDnsZoneName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "infrastructureSubnetId": {
+              "type": "string",
+              "value": "[format('{0}/subnets/aca-infra', resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', variables('baseName'))))]"
+            },
+            "vnetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', variables('baseName')))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'storage')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
       "name": "registry",
       "properties": {
         "expressionEvaluationOptions": {
@@ -201,6 +366,9 @@
           "storageAccountName": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.storageAccountName.value]"
           },
+          "environmentSubnetId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'networking'), '2025-04-01').outputs.infrastructureSubnetId.value]"
+          },
           "containerImage": {
             "value": "[parameters('containerImage')]"
           },
@@ -215,7 +383,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "13153681571760473665"
+              "templateHash": "4036387789670167633"
             }
           },
           "parameters": {
@@ -229,6 +397,9 @@
               "type": "string"
             },
             "storageAccountName": {
+              "type": "string"
+            },
+            "environmentSubnetId": {
               "type": "string"
             },
             "containerImage": {
@@ -248,7 +419,11 @@
               "name": "[format('{0}-env', parameters('appName'))]",
               "location": "[parameters('location')]",
               "properties": {
-                "zoneRedundant": false
+                "zoneRedundant": false,
+                "vnetConfiguration": {
+                  "infrastructureSubnetId": "[parameters('environmentSubnetId')]",
+                  "internal": false
+                }
               }
             },
             {
@@ -329,6 +504,7 @@
         }
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'networking')]",
         "[resourceId('Microsoft.Resources/deployments', 'registry')]",
         "[resourceId('Microsoft.Resources/deployments', 'storage')]"
       ]
